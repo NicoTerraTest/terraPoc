@@ -1,0 +1,64 @@
+name: "Terraform Build and Deploy - DEV"
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize]
+
+env:
+  terraform_version: 1.7.0
+  working_directory: ${{ github.workspace }}
+
+#only run 1 concurrently
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write 
+  contents: read
+  pull-requests: write
+
+jobs:
+    prepare-env-dev:
+
+      name: "Setup environment - DEV"
+
+      runs-on: 
+        group: just-linux-runners-v2
+
+      steps:
+        - run: echo "null"
+
+      outputs:
+        environment: dev
+        tf_dir: ${{ env.working_directory }}
+        tf_version: ${{ env.terraform_version }}
+
+    terraform-validate-and-build-dev:
+
+      name: "TF Build"
+
+      needs: [ prepare-env-dev ]
+
+      uses: Just-Crossborder/JustOps/.github/workflows/terraform-reusable-validate-and-build.yml@tf-v0.0.1
+      with:
+        environment: ${{ needs.prepare-env-dev.outputs.environment }}
+        tf_directory: ${{ needs.prepare-env-dev.outputs.tf_dir }}
+        tf_version: ${{ needs.prepare-env-dev.outputs.tf_version }}
+      secrets: inherit
+    
+    terraform-deploy-dev:
+
+      name: "TF Deploy"
+
+      needs: [ prepare-env-dev, terraform-validate-and-build-dev ]
+
+      uses: Just-Crossborder/JustOps/.github/workflows/terraform-reusable-deploy.yml@tf-v0.0.1
+      with:
+        environment: ${{ needs.prepare-env-dev.outputs.environment }}
+        tf_directory: ${{ needs.prepare-env-dev.outputs.tf_dir }}
+        tf_version: ${{ needs.prepare-env-dev.outputs.tf_version }}
+      secrets: inherit

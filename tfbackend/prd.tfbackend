@@ -1,0 +1,5 @@
+    subscription_id      = "28b840cb-341d-43f8-8079-f7e295b7adac"
+    storage_account_name = "azsacoreterraform"
+    container_name       = "c-terraform"
+    key                  = "network-justgenai-prd.tfstate"
+    resource_group_name  = "az_rg_core_terraform"

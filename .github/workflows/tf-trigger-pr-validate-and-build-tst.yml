@@ -1,0 +1,67 @@
+name: "Terraform Build and Deploy - TST"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main  #This job will only run if the PR has been merged. Direct Pushes to main are not allowed.
+  
+env:
+  terraform_version: 1.7.0
+  working_directory: ${{ github.workspace }}
+
+#only run 1 concurrently
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write 
+  contents: read
+  pull-requests: write
+
+jobs:
+    prepare-env-tst:
+
+      name: "Setup environment - TST"
+
+      runs-on: 
+        group: just-linux-runners-v2
+
+      steps:
+        - run: echo "null"
+
+      outputs:
+        environment: tst
+        tf_dir: ${{ env.working_directory }}
+        tf_version: ${{ env.terraform_version }}
+
+    terraform-validate-and-build-tst:
+      # this job will only run if the PR has been merged
+      # if: github.event.pull_request.merged == true
+
+      name: "TF Build"
+
+      needs: [ prepare-env-tst ]
+
+      uses: Just-Crossborder/JustOps/.github/workflows/terraform-reusable-validate-and-build.yml@tf-v0.0.1
+      with:
+        environment: ${{ needs.prepare-env-tst.outputs.environment }}
+        tf_directory: ${{ needs.prepare-env-tst.outputs.tf_dir }}
+        tf_version: ${{ needs.prepare-env-tst.outputs.tf_version }}
+      secrets: inherit
+    
+    terraform-deploy-tst:
+      # this job will only run if the PR has been merged
+      # if: github.event.pull_request.merged == true
+
+      name: "TF Deploy"
+
+      needs: [ prepare-env-tst, terraform-validate-and-build-tst ]
+
+      uses: Just-Crossborder/JustOps/.github/workflows/terraform-reusable-deploy.yml@tf-v0.0.1
+      with:
+        environment: ${{ needs.prepare-env-tst.outputs.environment }}
+        tf_directory: ${{ needs.prepare-env-tst.outputs.tf_dir }}
+        tf_version: ${{ needs.prepare-env-tst.outputs.tf_version }}
+      secrets: inherit
